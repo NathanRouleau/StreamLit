@@ -846,7 +846,8 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
     if file_extension in ['.jpg', '.jpeg', '.png']:
         # Si c'est une image, modérer l'image
         if moderate_image(media_file, rekognition) is not None:
-            return None  # Contenu choquant détecté
+            sensitivetheme = moderate_image(media_file, rekognition)
+            return sensitivetheme  # Contenu choquant détecté
         
         # Si l'image est modérée sans problème, détecter les objets, émotions et célébrités
         key_phrases = []
@@ -891,7 +892,6 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
             os.remove(temp_img_path)
             job_name = 'transcriptionText'
             transcript_text = get_text_from_speech(media_file, transcribe, job_name,bucket_name)
-            
             texte_nettoye = clean_text(transcript_text)
             key_phrases = extract_keyphrases(texte_nettoye, comprehend)
             return {'subtitles': transcript_text , 'hashtags': list(set(key_phrases))}

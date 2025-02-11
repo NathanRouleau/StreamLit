@@ -111,12 +111,12 @@ if uploaded_file is not None:
             #time.sleep(2)  
             print(uploaded_file)
             result = process_media(temp_file_path, aws_rekognition_client, aws_transcribe_client, aws_comprehend_client, BUCKET_NAME)
-            if result is None : 
+            if isinstance(result, list):
                 st.error("🚨 Contenu inapproprié détecté ! 🚨")
                 st.error("❌ Cette publication a été bloquée") 
-                # st.error("🔍 Thèmes détectés :")
-                # for theme in themes_detectes:
-                #     st.markdown(f"- ❌ **{theme}**", unsafe_allow_html=True)
+                st.error("🔍 Thèmes détectés :")
+                for theme in result:
+                     st.error(f"- ❌ **{theme}**")
 
             else:
                 if file_extension in ["jpg", "jpeg", "png"]:
@@ -131,10 +131,7 @@ if uploaded_file is not None:
                         st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
 
 
-            # Sauvegarder le fichier temporairement
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                temp_file.write(uploaded_file.getbuffer())
-                st.success(f"Le fichier a été sauvegardé temporairement sous : {temp_file.name}")
+            
 
 
 # # Fonction pour afficher le contenu approprié
