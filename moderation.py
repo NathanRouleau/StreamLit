@@ -46,11 +46,6 @@ def check_filetype(filename):
     
     return filetype
 
-TEST_VIDEO_FILE = "./assets/tuto_maquillage.mp4"
-TEST_IMAGE_FILE = "./assets/selfie_with_johnny-depp.png"
-
-check_filetype(TEST_VIDEO_FILE)
-check_filetype(TEST_IMAGE_FILE)
 
 def extract_frame_video(video_path, frame_id):
     """
@@ -89,52 +84,8 @@ def extract_frame_video(video_path, frame_id):
 
 
 
-TEST_VIDEO_FILE = "./assets/tuto_jeux-video.mp4"
-photo = extract_frame_video(TEST_VIDEO_FILE, 1)
-
-# Vérifier si l'image a été extraite avec succès
-if photo is not None:
-    # Conversion de l'image BGR (OpenCV) en RGB (Matplotlib)
-    photo_rgb = cv2.cvtColor(photo, cv2.COLOR_BGR2RGB)
-
-    # Affichage avec Matplotlib
-    plt.imshow(photo_rgb)
-    plt.axis('off')  # Supprimer les axes pour un affichage propre
-    plt.title("Première image extraite")
-    plt.show()
-else:
-    print("Erreur : Impossible d'extraire l'image.")
-
-TEST_VIDEO_FILE = "./assets/tuto_jeux-video.mp4"
-photo = extract_frame_video(TEST_VIDEO_FILE, 99)
-
-# Vérifier si l'image a été extraite avec succès
-if photo is not None:
-    # Conversion de l'image BGR (OpenCV) en RGB (Matplotlib)
-    photo_rgb = cv2.cvtColor(photo, cv2.COLOR_BGR2RGB)
-
-    # Affichage avec Matplotlib
-    plt.imshow(photo_rgb)
-    plt.axis('off')  # Supprimer les axes pour un affichage propre
-    plt.title("Première image extraite")
-    plt.show()
-else:
-    print("Erreur : Impossible d'extraire l'image.")
 
 
-# <h4 style="text-align: left; color:#20a08d; font-size: 25px"><span><strong> Modération d'une image
-# </strong></span></h4>
-
-# La fonction `get_aws_session` ci-dessous permet de se connecter à une session AWS en utilisant les clés d'accès et clés secrètes.
-
-# In[ ]:
-
-
-#!pip install boto3 python-dotenv 
-#!pip install nltk
-
-
-# In[ ]:
 
 
 import os, boto3
@@ -173,16 +124,6 @@ def get_aws_session():
     return aws_session
 
 
-# Passons maintenant au développement de la fonction `moderate_image`. Cette fonction prendra en entrée une image et renverra la liste des thèmes choquants présents dans l'image, s'il y'en a. 
-
-# <p style="text-align: left; font-size: 16px; color:#7a0f43"><span>❓ Quelle service AWS serait le plus indiqué pour réaliser ce traitement ?</span></p>
-
-# In[ ]:
-
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code dans la fonction  <strong>moderate_image</strong> permettant d'analyser une image et détecter les sujets de modération </span></p>
-
-# In[104]:
 
 
 def moderate_image(image_path, aws_service):
@@ -228,13 +169,6 @@ def moderate_image(image_path, aws_service):
 
 
 
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant de tester la fonction  <strong>moderate_image</strong>. Pour ce faire : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#     <li>Instancier une session AWS avec vos clés</li>
-#     <li>Instancier le service AWS approprié pour ce traitement </li>
-#     <li>Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">moderate_image</code> avec ce service comme argument afin de recueillir la liste potentielle des thèmes choquants</li>
-#     </ul> </span></p>
-
-# In[33]:
 
 
 import os
@@ -255,55 +189,7 @@ def get_aws_session():
         region_name="us-east-1"  # Vous pouvez changer la région si nécessaire
     )
 
-TEST_IMAGE_FILE_1 = "./assets/haine.png"
-TEST_IMAGE_FILE_2 = "./assets/vulgaire.png"
-TEST_IMAGE_FILE_3 = "./assets/violence1.png"
-TEST_IMAGE_FILE_4 = "./assets/no-violence1.png"
-
-def test_moderate_image():
-    # Instancier une session AWS
-    aws_session = get_aws_session()
-
-    # Créer un client pour Amazon Rekognition
-    rekognition_client = aws_session.client('rekognition')
-
-    # Liste des fichiers d'image à tester
-    image_files = [
-        "./assets/haine.png",
-        "./assets/vulgaire.png",
-        "./assets/violence1.png",
-        "./assets/no-violence1.png"
-    ]
-
-    # Tester chaque image
-    for image_file in image_files:
-        print(f"Analyse de l'image : {image_file}")
-        themes_choquants = moderate_image(image_file, rekognition_client)
         
-        # Affichage des résultats pour chaque image
-        if themes_choquants:
-            print(f"Thèmes choquants détectés dans '{image_file}': {themes_choquants}")
-        else:
-            print(f"Aucun thème choquant détecté dans '{image_file}'.")
-        print("-" * 50)
-
-        
-# Lancer le test
-test_moderate_image()
-
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 25px"><span><strong> Production de sous-titres
-# </strong></span></h4>
-
-# La production de sous-titres à partir d'une vidéo s'appuiera sur la technologie speech-to-text d'AWS.
-
-# <div class="alert alert-info">
-#   <strong>BUCKET S3</strong><br><br> Au préalable, assurez-vous d'avoir créé un bucket S3 puisque la transcription speech-to-text nécessite que le fichier transcrit soit déposé dans un bucket S3
-# </div>
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant d'instancier un client S3 puis de créer un bucket </span></p>
-
-# In[34]:
 
 
 import boto3
@@ -337,25 +223,6 @@ def create_s3_bucket(bucket_name):
         print(f"Erreur lors de la création du bucket S3 : {e}")
 
 
-# Nom du bucket à créer
-bucket_name = "s3-transcriptionspeachtest"  # Remplacez par un nom de bucket unique
-
-# Créer le bucket S3
-create_s3_bucket(bucket_name)
-
-
-# <p style="text-align: left; font-size: 16px; color:#7a0f43"><span>❓ Quelle service AWS serait le plus indiqué pour réaliser ce traitement de transcription speech-to-text ?</span></p>
-
-# In[ ]:
-
-
-
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code de la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">get_text_from_speech</code> permettant de réaliser la transcription speech-to-text avec AWS</span></p>
-
-# <p style="text-align: left; font-size: 16px; color:#ec8f1a"><span>📚  Voice to text using AWS Transcribe : </span> <a href="https://dev.to/botreetechnologies/voice-to-text-using-aws-transcribe-with-python-1cfc">https://dev.to/botreetechnologies/voice-to-text-using-aws-transcribe-with-python-1cfc</a></p> 
-
-# In[37]:
 
 
 import os
@@ -405,6 +272,7 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
     # Téléverser le fichier audio dans S3
     try:
         s3_client.upload_file(filename, bucket_name, os.path.basename(filename))
+        print(bucket_name)
         print(f"Fichier {filename} téléversé avec succès dans le seau {bucket_name}.")
     except Exception as e:
         print(f"Erreur lors du téléversement du fichier : {e}")
@@ -462,13 +330,7 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
         return None
 
 
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant de tester la fonction  <strong>get_text_from_speech</strong>. Pour ce faire : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#     <li>Uploader la vidéo de test sur le bucket de test préalablement créé</li>
-#     <li>Instancier le service AWS approprié pour ce traitement </li>
-#     <li>Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">get_text_from_speech</code> avec ce service comme argument afin de recueillir le texte recueilli</li>
-#     </ul> </span></p>
 
-# In[38]:
 
 
 import os
@@ -510,27 +372,7 @@ def extract_keyphrases(text, aws_service):
         return []
 
 # Créer la session AWS
-aws_session = get_aws_session()
 
-# Créer le client AWS Comprehend
-aws_comprehend_client = aws_session.client('comprehend', region_name='us-east-1')
-
-
-# Appeler la fonction pour extraire les expressions clés
-#key_phrases = extract_keyphrases(texte_nettoye, aws_comprehend_client)
-
-# Afficher les résultats
-print("Les 10 expressions clés extraites sont :")
-# for phrase in key_phrases:
-#     print(f"#{phrase}")
-
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 25px"><span><strong> Production de hashtags d'une séquence vidéo
-# </strong></span></h4>
-
-# La production de hashtag sur une séquence vidéo se base sur le texte extrait de la vidéo après l'étape de speech-to-text, qui sera utilisé pour en extraire des mots-clés (keyphrases). Au préalable, le texte extrait devra être nettoyé pour y enlever quelques éléments inutiles. C'est la fonction de la fonction `clean_text`
-
-# In[65]:
 
 
 import nltk
@@ -575,25 +417,6 @@ def clean_text(raw_text):
     return ' '.join(cleaned_text)
 
 
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">clean_text</code> le texte extrait afin de recueillir un texte nettoyé</span></p>
-
-# In[66]:
-
-
-# print(transcript_text)
-# texte_nettoye = clean_text(transcript_text)
-# print(texte_nettoye)
-
-
-# <p style="text-align: left; font-size: 16px; color:#7a0f43"><span>❓ Quelle service AWS serait le plus indiqué pour réaliser ce traitement d'extraction des "key phrases" ?</span></p>
-
-# In[67]:
-
-
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code de la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">extract_keyphrases</code> permettant d'extraire les mots clés d'un texte en entrée. Ne retenez que les 10 mots-clés détectés avec le plus de confiance</span></p>
-
-# In[79]:
 
 
 import boto3
@@ -654,12 +477,7 @@ def extract_keyphrases(text, aws_service):
         return []
 
 
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant de tester la fonction  <strong>extract_keyphrases</strong>. Pour ce faire : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#     <li>Instancier le service AWS approprié pour ce traitement </li>
-#     <li>Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">extract_keyphrases</code> avec ce service comme argument afin de recueillir la liste des mots-clés</li>
-#     </ul> </span></p>
 
-# In[80]:
 
 
 import os
@@ -681,33 +499,7 @@ def get_aws_session():
         region_name="us-east-1"  # Vous pouvez changer la région si nécessaire
     )
 
-# aws_session = get_aws_session()
-# print(transcript_text)
-# texte_nettoye = clean_text(transcript_text)
-# print(texte_nettoye)
-# # Créer le client AWS Comprehend
-# aws_comprehend_client = aws_session.client('comprehend', region_name='us-east-1')
 
-# # Appeler la fonction pour extraire les expressions clés
-# key_phrases = extract_keyphrases(texte_nettoye, aws_comprehend_client)
-
-# # Afficher les résultats
-# print("Les 10 expressions clés extraites sont :")
-# for phrase in key_phrases:
-#     print(f"#{phrase}")
-
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 25px"><span><strong> Production de hashtags d'une image
-# </strong></span></h4>
-
-# La production de hashtags sur une image se base sur la détection des objets et des célébrités présents dans l'image.
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 20px"><span><strong> Détection d'objets sur une image
-# </strong></span></h4>
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code de la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">detect_objects</code> permettant de détecter les objets présents sur une image donnée en entrée de la fonction. Ne retenez que les 10 objets détectés avec le plus de confiance.</span></p>
-
-# In[81]:
 
 
 def detect_objects(image_path, aws_service):
@@ -758,34 +550,9 @@ def detect_objects(image_path, aws_service):
         return []
 
 
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant de tester la fonction  <strong>detect_objects</strong>. Pour ce faire : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#     <li>Instancier le service AWS approprié pour ce traitement </li>
-#     <li>Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">detect_objects</code> avec ce service comme argument afin de recueillir la liste des objets présents sur cette image de test</li>
-#     </ul> </span></p>
-
-# In[83]:
 
 
-image_path = './assets/no-violence4.png'
-aws_session = get_aws_session()
-# Instancier le client AWS Rekognition
-aws_rekognition_client = aws_session.client('rekognition', region_name='us-east-1')
 
-# Appeler la fonction pour détecter les objets dans l'image
-objects = detect_objects(image_path, aws_rekognition_client)
-
-# Afficher les 10 objets détectés
-print("Les objets détectés sont :")
-for obj in objects:
-    print(obj)
-
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 20px"><span><strong> Détection des célébrités sur une image
-# </strong></span></h4>
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code de la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">detect_celebrities</code> permettant de détecter les célébrités présents sur une image donnée en entrée de la fonction.</span></p>
-
-# In[84]:
 
 
 def detect_celebrities(image_path, aws_service):
@@ -834,85 +601,6 @@ def detect_celebrities(image_path, aws_service):
         return []
 
 
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant de tester la fonction  <strong>detect_celebrities</strong>. Pour ce faire : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#     <li>Instancier le service AWS approprié pour ce traitement </li>
-#     <li>Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">detect_celebrities</code> avec ce service comme argument afin de recueillir la liste des célébrités présentes sur chacune des images de test</li>
-#     </ul> </span></p>
-
-# 
-# def test_detect_celebrities():
-#     aws_session = get_aws_session()
-#     # Instancier le client AWS Rekognition
-#     aws_rekognition_client = aws_session.client('rekognition', region_name='us-east-1')
-# 
-#     # Liste des chemins vers les images de test
-#     image_paths = [
-#         './assets/selfie_with_mariah-carey.png',  # Remplacer par le chemin réel de l'image 1
-#         './assets/selfie_with_johnny-depp.png',  # Remplacer par le chemin réel de l'image 2
-#         './assets/selfie_with_kanye-west.png'   # Remplacer par le chemin réel de l'image 3
-#     ]
-# 
-#     # Tester la détection des célébrités pour chaque image
-#     for image_path in image_paths:
-#         print(f"\nDétection des célébrités pour l'image : {image_path}")
-#         celebrities = detect_celebrities(image_path, aws_rekognition_client)
-#         
-#         if celebrities:
-#             print("Célébrités détectées :")
-#             for celeb in celebrities:
-#                 print(f"- {celeb}")
-#         else:
-#             print("Aucune célébrité détectée.")
-# 
-# # Appeler la fonction de test
-# test_detect_celebrities()
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 20px"><span><strong> Reconnaissance d'émotion faciale sur une image
-# </strong></span></h4>
-
-# <span style="color:#131fcf">🖥️ Codez la fonction `detect_emotions` qui doit :
-# 
-# <ul style="color:#131fcf">
-# <li>Prendre en entrée :
-#   <ul>
-#     <li>Le chemin de l'image à analyser</li>
-#     <li>Le client AWS Rekognition configuré</li>
-#   </ul>
-# </li>
-# 
-# <li>Analyser l'image :
-#   <ul>
-#     <li>Ouvrir l'image en mode binaire</li>
-#     <li>Utiliser Rekognition avec <strong>detect_faces</strong></li>
-#     <li>Demander tous les attributs (Attributes=['ALL'])</li>
-#   </ul>
-# </li>
-# 
-# <li>Pour chaque visage détecté, afficher :
-#   <ul>
-#     <li>Le genre avec son niveau de confiance</li>
-#     <li>L'âge estimé (range min-max)</li>
-#     <li>Les 3 émotions principales avec leur niveau de confiance</li>
-#   </ul>
-# </li>
-# 
-# <li>Retourner la liste complète des informations des visages détectés</li>
-# 
-# <li>Exemple de sortie console attendue :
-# <code style="color:#131fcf">
-# [INFO] Visage détecté:
-#   - Genre: Male (confiance: 99.9%)
-#   - Âge estimé: 20-30 ans
-#   - Émotions principales:
-#     * HAPPY: 95.5%
-#     * CALM: 4.5%
-# ---
-# </code>
-# </li>
-# </ul>
-# </span>
-
-# In[91]:
 
 
 def detect_emotions(image_path, aws_service):
@@ -1001,45 +689,6 @@ def detect_emotions(image_path, aws_service):
         return []
 
 
-# <span style="color:#131fcf">🖥️ Codez la fonction `summarize_emotions` qui doit :
-# 
-# <ul style="color:#131fcf">
-# <li>Prendre en entrée une liste de visages détectés dans une image comme fourni par la fonction <code>detect_emotions</code></li>
-# <li>Exemple d'entrée :
-# <code style="color:#131fcf">
-# [{
-#     'Gender': {'Value': 'Male', 'Confidence': 99.9},
-#     'AgeRange': {'Low': 20, 'High': 30},
-#     'Emotions': [
-#         {'Type': 'HAPPY', 'Confidence': 95.5},
-#         {'Type': 'CALM', 'Confidence': 4.5}
-#     ]
-# }]
-# </code>
-# <li>Pour chaque visage, analyser :
-#   <ul>
-#     <li>Le genre (Homme/Femme)</li>
-#     <li>L'âge (calcul de la moyenne du range)</li>
-#     <li>Les émotions avec une confiance > 50%</li>
-#   </ul>
-# </li>
-# 
-# <li>Retourner un dictionnaire avec :
-#   <ul>
-#     <li>Nombre total de visages</li>
-#     <li>Émotion dominante (celle avec la plus haute confiance moyenne)</li>
-#     <li>Statistiques des émotions (comptage et confiance moyenne)</li>
-#     <li>Statistiques d'âge (min, max, moyenne)</li>
-#     <li>Distribution des genres</li>
-#   </ul>
-# </li>
-# </li>
-# </ul>
-# </span>
-
-# In[92]:
-
-
 def summarize_emotions(faces_info):
     """
     Résume les émotions détectées sur tous les visages d'une image.
@@ -1118,34 +767,7 @@ def summarize_emotions(faces_info):
     return summary
 
 
-# <ul style="color:#131fcf">
-# <li>Testez la détection et l'analyse d'émotions :
-#   <ul>
-#     <li>Sur chacune des 4 images de groupe</li>
-#     <li>Comparez les résultats entre elles</li>
-#   </ul>
-# </li>
-# <li>Pour chaque image :
-#   <ul>
-#     <li>Afficher les détails de chaque visage détecté</li>
-#     <li>Générer le résumé des statistiques</li>
-#     <li>Noter les différences d'émotions dominantes</li>
-#   </ul>
-# </li>
-# </li>
-# </ul>
-# </span>
 
-# In[93]:
-
-
-# Définir les chemins des images de test
-aws_session = get_aws_session()
-aws_rekognition_client = aws_session.client('rekognition', region_name='us-east-1')
-TEST_IMAGE_FILE_1 = "./assets/group_selfie_1.jpg"    # Premier selfie de groupe
-TEST_IMAGE_FILE_2 = "./assets/group_selfie_2.jpg"    # Deuxième selfie de groupe
-TEST_IMAGE_FILE_3 = "./assets/group_selfie_3.jpg"    # Troisième selfie de groupe
-TEST_IMAGE_FILE_4 = "./assets/group_selfie_4.jpg"    # Quatrième selfie de groupe
 def print_face_details(faces_info):
     """
     Affiche les détails des visages détectés (genre, âge, émotions).
@@ -1190,47 +812,6 @@ def analyze_image(image_path):
     print(f"    * Hommes : {summary['gender_stats']['Male']}")
     print(f"    * Femmes : {summary['gender_stats']['Female']}")
     print("\n" + "-" * 50)
-
-
-# Analyser les images de test
-analyze_image(TEST_IMAGE_FILE_1)
-analyze_image(TEST_IMAGE_FILE_2)
-analyze_image(TEST_IMAGE_FILE_3)
-analyze_image(TEST_IMAGE_FILE_4)
-
-
-# In[ ]:
-
-
-
-
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 20px"><span><strong> Fonction de traitement finale
-# </strong></span></h4>
-
-# Il est maintenant temps de développer la fonction de traitement finale `process_media` qui se basera sur l'ensemble des fonctions développées précédemment.
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code de la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">process_media</code> permettant de réaliser l'ensemble des traitements : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#     <li>Déterminer le type de média (vidéo ou image)</li>
-#     <li>Si le média est une image : </li>
-#     <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#         <li>Modérer l'image</li>
-#         <li>Si aucun contenu choquant n'est détecté,  détecter les objets, l'émotion dominante des visages et les célébrités présents sur l'image qui serviront de mot-clés pour produire les hashtags</li>
-#         <li>Si du contenu choquant est trouvé, retourner <strong>None</strong></li>
-#     </ul>
-#     <li>Si le média est une vidéo : </li>
-#     <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#         <li>Extraire la première image de la vidéo</li>
-#         <li>Sauvegarder cette image comme fichier temporaire</li>
-#         <li>Modérer cette première image</li>
-#         <li>Si aucun contenu choquant n'est détecté sur cette image,  convertir la voix présente sur la vidéo en texte</li>
-#         <li>Extraire les mots-clés du texte extrait</li>
-#         <li>Si du contenu choquant est trouvé, retourner <strong>None</strong></li>
-#     </ul>
-#     <li>La sortie de cette fonction devra être un dictionnaire et avoir ce format : <strong>{subtitles : "abcdefgijklm", hashtags:["hastag1", "hastag1", ...]}</strong> pour une vidéo et <strong>{hashtags:["hastag1", "hastag1", ...]} pour une image</strong> </li>
-# </ul></span></p>
-
-# In[54]:
 
 
 import os
@@ -1319,33 +900,3 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
         
     return None
     
-
-
-# <p style="text-align: left; font-size: 16px; color:#131fcf"><span>🖥️  Ecrivez le code permettant de tester la fonction  <strong>process_media</strong>. Pour ce faire : <ul style="text-align: left; font-size: 16px; color:#131fcf">
-#         <li>Instancier une session AWS avec vos clés</li>
-#     <li>Instancier les services AWS appropriés pour tous les traitements </li>
-#     <li>Appelez la fonction <code style="text-align: left; font-size: 16px; color:#131fcf">process_media</code> sur l'image de test et la vidéo de test afin d'en vérifier le bon fonctionnement </li>
-#     </ul> </span></p>
-
-# In[55]:
-
-
-# aws_session = get_aws_session()
-# aws_rekognition_client = aws_session.client('rekognition', region_name='us-east-1')
-# aws_comprehend_client = aws_session.client('comprehend', region_name='us-east-1')
-# aws_transcribe_client = aws_session.client('transcribe', region_name='us-east-1')
-# TEST_VIDEO_FILE = "./assets/tuto_jeux-video.mp4"
-# TEST_IMAGE_FILE = "./assets/selfie_with_johnny-depp.png"
-# BUCKET_NAME = 's3-transcriptionspeachtest'
-
-# image = process_media(TEST_IMAGE_FILE,aws_rekognition_client,aws_transcribe_client ,aws_comprehend_client,BUCKET_NAME)
-# video = process_media(TEST_VIDEO_FILE,aws_rekognition_client,aws_transcribe_client ,aws_comprehend_client,BUCKET_NAME)
-# print(image)
-# print(video)
-
-
-# <h4 style="text-align: left; color:#20a08d; font-size: 25px"><span><strong> Resources 📚📚</strong></span></h4>
-# 
-# * <a href="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/translate.html" target="_blank">Translate with Boto3</a>
-# * <a href="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/textract.html#Textract.Client.start_document_text_detection" target="_blank">Textract Documentation</a>
-# * <a href="https://aws.amazon.com/textract/" target="_blank">Textract Landing</a>
