@@ -111,7 +111,7 @@ if uploaded_file is not None:
             #time.sleep(2)  
             print(uploaded_file)
             result = process_media(temp_file_path, aws_rekognition_client, aws_transcribe_client, aws_comprehend_client, BUCKET_NAME)
-            if isinstance(result, list):
+            if isinstance(result, list) or result is None:
                 st.error("🚨 Contenu inapproprié détecté ! 🚨")
                 st.error("❌ Cette publication a été bloquée") 
                 st.error("🔍 Thèmes détectés :")
@@ -119,6 +119,7 @@ if uploaded_file is not None:
                      st.error(f"- ❌ **{theme}**")
 
             else:
+                # Image
                 if file_extension in ["jpg", "jpeg", "png"]:
                     st.image(temp_file_path, caption="Image validée ✅", use_container_width=True)
 
@@ -129,6 +130,28 @@ if uploaded_file is not None:
                     else:
                         st.write("Aucun hashtag généré.")
                         st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
+
+                # Vidéo
+                if file_extension in ["mp4", "avi"]:
+                    st.video(temp_file_path)
+
+                    hashtags = result.get("hashtags", [])
+                    if hashtags:
+                        st.markdown("### 🏷️ Hashtags générés :")
+                        st.markdown(", ".join([f"**#{tag}**" for tag in hashtags]))
+                    else:
+                        st.write("Aucun hashtag généré.")
+                        st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
+
+                    transcription = result.get("subtitles", "").strip()
+
+                    if transcription:
+                        st.markdown("📝 Transcription :")
+                        st.text_area("Texte extrait de la vidéo :", transcription, height=200)
+                    else:
+                        st.write("Aucune transcription disponible.")
+
+                    st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
 
 
             
