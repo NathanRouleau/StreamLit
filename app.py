@@ -6,6 +6,7 @@ from botocore.exceptions import NoCredentialsError
 from dotenv import load_dotenv
 import os
 from moderation import *
+import tempfile
 
 aws_session = get_aws_session()
 aws_rekognition_client = aws_session.client('rekognition', region_name='us-east-1')
@@ -89,8 +90,6 @@ st.subheader("Choisissez un fichier (image ou vidéo)")
 uploaded_file = st.file_uploader("Glissez-déposez un fichier ou cliquez pour ouvrir l'explorateur", type=["jpg", "jpeg", "png", "mp4", "avi"])
 
 # Si un fichier est sélectionné
-import tempfile
-
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split('.')[-1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
@@ -113,14 +112,29 @@ if uploaded_file is not None:
             print(uploaded_file)
             result = process_media(temp_file_path, aws_rekognition_client, aws_transcribe_client, aws_comprehend_client, BUCKET_NAME)
             if result is None : 
-                st.write("Contenu inaproprié détecté.")
+                st.error("🚨 Contenu inapproprié détecté ! 🚨")
+                st.error("❌ Cette publication a été bloquée") 
+                # st.error("🔍 Thèmes détectés :")
+                # for theme in themes_detectes:
+                #     st.markdown(f"- ❌ **{theme}**", unsafe_allow_html=True)
+
+            else:
+                if file_extension in ["jpg", "jpeg", "png"]:
+                    st.image(temp_file_path, caption="Image validée ✅", use_container_width=True)
+
+                    hashtags = result.get("hashtags", [])
+                    if hashtags:
+                        st.markdown("### 🏷️ Hashtags générés :")
+                        st.markdown(", ".join([f"**#{tag}**" for tag in hashtags]))
+                    else:
+                        st.write("Aucun hashtag généré.")
+                        st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
+
 
             # Sauvegarder le fichier temporairement
             with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                 temp_file.write(uploaded_file.getbuffer())
                 st.success(f"Le fichier a été sauvegardé temporairement sous : {temp_file.name}")
-
-            st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
 
 
 # # Fonction pour afficher le contenu approprié
