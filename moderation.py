@@ -24,8 +24,7 @@ def check_filetype(filename):
     - filename (str) : Le chemin vers le fichier incluant le nom de fichier.
 
     Retourne :
-    - str ou None : Le type de fichier déterminé ('image', 'vidéo') ou None si le type de fichier
-      n'est pas reconnu.
+    - str ou None : Le type de fichier déterminé ('image', 'vidéo'), sinon {'error': 'Ce type de fichier n'est pas supporté'}.
 
     Exemple :
     >>> check_filetype("/chemin/vers/image.jpg")
@@ -39,6 +38,8 @@ def check_filetype(filename):
     #extrait le nom du fichier
     file_basename = os.path.basename(filename) 
 
+    if "." not in file_basename:
+        return {"error": "Fichier sans extension, impossible de déterminer le type"}
     # Sépare le nom pour récupérer le type du fichier
     extension = file_basename.split(".")[-1]
 
@@ -48,7 +49,7 @@ def check_filetype(filename):
     elif extension in ["mp4", "avi", "mkv"]:
         filetype = "vidéo"
     else:
-        filetype = None
+        return {"error": "Ce type de fichier n'est pas supporté"}
 
     # Enregistre le type de fichier détecté
     print(f"[INFO] : Le fichier {file_basename} est de type : {filetype}")
@@ -142,16 +143,25 @@ def moderate_image(image_path, aws_service):
       de contenu nécessitant une modération (par exemple, un client Amazon Rekognition).
 
     Retourne :
-    - list[str] : Une liste des noms des étiquettes de modération détectées pour l'image.
+    - list[str] : Une liste des noms des étiquettes de modération détectées pour l'image. ou alors une erreur si problème détecter
 
     Exemple d'utilisation :
     >>> aws_rekognition_client = boto3.client('rekognition', region_name='us-east-1')
     >>> moderate_image("/chemin/vers/image.jpg", aws_rekognition_client)
     ['Nudity', 'Explicit Violence']
     """
+    if not isinstance(image_path, str):
+        return {"error": "Le chemin de l'image doit être une chaîne de caractères."}
+    
     # ouvrir l'image, récupérer ses bytes
-    with open(image_path, 'rb') as image_file:
-        image_bytes = image_file.read()
+    try:
+        with open(image_path, 'rb') as image_file:
+            image_bytes = image_file.read()
+
+    except FileNotFoundError:
+        return {"error": "Fichier introuvable. Vérifiez le chemin."}
+    except IOError:
+        return {"error": "Impossible de lire le fichier. Vérifiez les permissions."}
 
     # Appeler le service AWS (ici Rekognition) 
     response = aws_service.detect_moderation_labels(
@@ -394,13 +404,16 @@ def detect_objects(image_path, aws_service):
     - aws_service (object) : Un client AWS Rekognition configuré.
 
     Retourne :
-    - list[str] : Une liste contenant les noms des 10 premiers objets détectés dans l'image.
+    - list[str] : Une liste contenant les noms des 10 premiers objets détectés dans l'image. ou une erreur
 
     Exemple d'utilisation :
     >>> aws_rekognition_client = boto3.client('rekognition', region_name='us-east-1')
     >>> detect_objects("/chemin/vers/image.jpg", aws_rekognition_client)
     ['Voiture', 'Arbre', 'Personne']
     """
+    if not isinstance(image_path, str):
+        return {"error": "Le chemin de l'image doit être une chaîne de caractères."}
+    
     try:
         # Ouvrir l'image et la lire en binaire
         with open(image_path, 'rb') as image_file:
@@ -418,15 +431,13 @@ def detect_objects(image_path, aws_service):
         
         # Trier les labels par score de confiance (du plus élevé au plus bas)
         sorted_labels = sorted(labels, key=lambda x: x['Confidence'], reverse=True)
-
         # Extraire les 10 objets avec les plus hauts scores de confiance
         top_objects = [label['Name'] for label in sorted_labels[:10]]
 
         return top_objects
-    #si erreur lors du traitement alors return un tableau vide 
+    #si erreur lors du traitement alors return une erreur 
     except Exception as e:
-        print(f"Erreur lors de la détection des objets : {e}")
-        return []
+        return {"error": "Aucun objet détecté dans l'image."}
 
 def detect_celebrities(image_path, aws_service):
     """
@@ -448,6 +459,8 @@ def detect_celebrities(image_path, aws_service):
     >>> detect_celebrities("/chemin/vers/limage.jpg", aws_rekognition_client)
     ['Leonardo DiCaprio', 'Kate Winslet']
     """
+    if not isinstance(image_path, str):
+        return {"error": "Le chemin de l'image doit être une chaîne de caractères."}
     try:
         # Ouvrir l'image et la lire en binaire
         with open(image_path, 'rb') as image_file:
@@ -471,8 +484,7 @@ def detect_celebrities(image_path, aws_service):
 
     #return un tableau vide
     except Exception as e:
-        print(f"Erreur lors de la détection des célébrités : {e}")
-        return []
+        return {"error": "Erreur lors de la détection des célébrités"}
 
 def detect_emotions(image_path, aws_service):
     """
@@ -509,6 +521,8 @@ def detect_emotions(image_path, aws_service):
     >>> for face in emotions:
     ...     print(f"Émotions détectées : {face['Emotions']}")
     """
+    if not isinstance(image_path, str):
+        return {"error": "Le chemin de l'image doit être une chaîne de caractères."}
     try:
         # Ouvrir l'image et la lire en binaire
         with open(image_path, 'rb') as image_file:
@@ -547,8 +561,7 @@ def detect_emotions(image_path, aws_service):
         return faces_info
 
     except Exception as e:
-        print(f"Erreur lors de la détection des émotions : {e}")
-        return []
+        return {"error": "erreur lors du traitement des emotions"}
 
 
 def summarize_emotions(faces_info):
@@ -627,28 +640,40 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
     - dict : Dictionnaire contenant des hashtags pour les images ou des sous-titres et hashtags pour les vidéos.
     """
     file_type = check_filetype(media_file)
-
+    if "error" in file_type:
+        return file_type
+    
     if file_type =="image":
         # Si c'est une image, modérer l'image
         if moderate_image(media_file, rekognition) is not None:
             sensitivetheme = moderate_image(media_file, rekognition)
+            #récupération des cas d'erreurs pour affichage
+            if "error" in sensitivetheme:
+                return sensitivetheme
             return sensitivetheme  # Contenu choquant détecté
         
-        # Si l'image est modérée sans problème, détecter les objets, émotions et célébrités
+        
         key_phrases = []
-
         # Détection des objets
-        key_phrases.extend(detect_objects(media_file, rekognition))
+        detectObject = detect_objects(media_file, rekognition)
+        if "error" in detectObject:
+            return detectObject
+        key_phrases.extend(detectObject)
         
         # Détection des émotions et des visages
         faces = detect_emotions(media_file, rekognition)  # Utilisation de votre fonction detect_emotions
+        if "error" in faces:
+            return faces
         for face in faces:
             for emotion in face['Emotions']:
                 if emotion['Confidence'] > 50:
                     key_phrases.append(f"{emotion['Type'].lower()}")
         
         # Détection des célébrités
-        key_phrases.extend(detect_celebrities(media_file, rekognition))        
+        detectCelebrities = detect_celebrities(media_file, rekognition)
+        if "error" in detectCelebrities:
+            return detectCelebrities
+        key_phrases.extend(detectCelebrities)        
         # Retourner les hashtags
         return {'hashtags': list(set(key_phrases))}
     elif file_type == "vidéo":
