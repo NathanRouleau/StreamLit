@@ -80,7 +80,7 @@ uploaded_file = st.file_uploader("Glissez-déposez un fichier ou cliquez pour ou
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split('.')[-1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
-        temp_file.write(uploaded_file.getbuffer())  # Sauvegarde du fichier
+        temp_file.write(uploaded_file.getbuffer())
         temp_file_path = temp_file.name
     st.write("Fichier sélectionné:", uploaded_file.name)
 
@@ -94,9 +94,9 @@ if uploaded_file is not None:
         st.error(f"La taille du fichier dépasse la limite de {MAX_SIZE / (1024 * 1024)} MB.")
     else:
         with st.spinner("Analyse en cours..."):
-            # Simuler un traitement du fichier (remplacer par ton code de traitement réel)
             print(uploaded_file)
             result = process_media(temp_file_path, aws_rekognition_client, aws_transcribe_client, aws_comprehend_client, BUCKET_NAME)
+            # Si contenu inapproprié
             if "error" in result: 
                 st.warning(result["error"])
             if isinstance(result, list) or result is None:
@@ -111,17 +111,19 @@ if uploaded_file is not None:
                     </div>""", unsafe_allow_html=True
                 )
                 
-                # Liste des thèmes problématiques en cas d'image inapropriée 
+                # Liste des thèmes problématiques en cas d'image inappropriée 
                 if result:
                     st.error("🔍 Thèmes détectés :")
                     for theme in result:
                         st.error(f"⚠️ **{theme}**")
-
+            
+            # Si l'image/video est correcte
             else:
                 # Image
                 if file_extension in ["jpg", "jpeg", "png"]:
                     st.image(temp_file_path, caption="Image validée ✅", use_container_width=True)
 
+                    # Gestion des hashtags
                     hashtags = result.get("hashtags", [])
                     if hashtags:
                         st.markdown("### 🏷️ Hashtags générés :")
@@ -137,6 +139,7 @@ if uploaded_file is not None:
                 if file_extension in ["mp4", "avi"]:
                     st.video(temp_file_path)
 
+                    # Gestion des hashtags
                     hashtags = result.get("hashtags", [])
                     if hashtags:
                         st.markdown("### 🏷️ Hashtags générés :")
@@ -157,47 +160,3 @@ if uploaded_file is not None:
                         st.write("Aucune transcription disponible.")
 
                     st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
-
-
-            
-
-
-# # Fonction pour afficher le contenu approprié
-# def display_appropriate_content(content_type, uploaded_file, hashtags):
-#     st.subheader("Contenu approprié")
-
-#     if content_type == "image":
-#         # Affichage de l'image
-#         st.image(uploaded_file, caption="Image téléchargée", use_column_width=True)
-#     elif content_type == "video":
-#         # Affichage de la vidéo
-#         st.video(uploaded_file, caption="Vidéo téléchargée")
-
-#     # Affichage des hashtags
-#     st.write("Hashtags générés :")
-#     for hashtag in hashtags:
-#         st.markdown(f"<span style='color: #6c63ff; font-weight: bold;'>{hashtag}</span>", unsafe_allow_html=True)
-
-#     # Option de transcription pour la vidéo (si vidéo)
-#     if content_type == "video":
-#         st.write("Transcription vidéo :")
-#         # Ici tu pourrais ajouter une fonction pour la transcription automatique via un service externe
-#         st.text("Transcription à venir...")
-
-# # Fonction pour afficher une alerte en cas de contenu inapproprié
-# def display_inappropriate_content(sensitive_themes):
-#     st.markdown("<div style='background-color: #f8d7da; color: #721c24; padding: 20px; border-radius: 5px;'>", unsafe_allow_html=True)
-#     st.markdown("<h3>Attention !</h3>", unsafe_allow_html=True)
-#     st.markdown("Le contenu a été bloqué pour les raisons suivantes : ", unsafe_allow_html=True)
-
-#     # Liste des thèmes sensibles détectés
-#     for theme in sensitive_themes:
-#         st.markdown(f"- {theme}", unsafe_allow_html=True)
-    
-#     st.markdown("</div>", unsafe_allow_html=True)
-
-# # Logique pour afficher le contenu en fonction de son appropriateness
-# if is_appropriate:
-#     display_appropriate_content(content_type, uploaded_file, hashtags)
-# else:
-#     display_inappropriate_content(sensitive_themes)

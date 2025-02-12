@@ -1,4 +1,4 @@
-# StreamLit - Traitement de Médias avec AWS
+# StreamLit - Content Moderator
 
 ## 📸 Description
 

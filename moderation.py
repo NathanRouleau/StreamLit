@@ -56,9 +56,6 @@ def check_filetype(filename):
     
     return filetype
 
-
-import cv2
-
 def extract_frame_video(video_path, frame_id):
     """
     Extrait une image spécifique d'une vidéo.
@@ -117,17 +114,14 @@ def get_aws_session():
     # Charge les variables d'environnement depuis .env.
     load_dotenv()
 
-    # Crée une session AWS avec les clés spécifié
+    # Crée une session AWS en récupérant les clés
     aws_session = boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),        # Récupère l'access key 
-        aws_secret_access_key=os.getenv("SECRET_KEY"),    # Récupère la clé secret key
+        aws_access_key_id=os.getenv("ACCESS_KEY"), 
+        aws_secret_access_key=os.getenv("SECRET_KEY"),  
+        region_name="us-east-1" 
     )
     
-    # Retourne la session
     return aws_session
-
-
-
 
 def moderate_image(image_path, aws_service):
     """
@@ -153,7 +147,7 @@ def moderate_image(image_path, aws_service):
     if not isinstance(image_path, str):
         return {"error": "Le chemin de l'image doit être une chaîne de caractères."}
     
-    # ouvrir l'image, récupérer ses bytes
+    # ouvrir l'image
     try:
         with open(image_path, 'rb') as image_file:
             image_bytes = image_file.read()
@@ -163,7 +157,7 @@ def moderate_image(image_path, aws_service):
     except IOError:
         return {"error": "Impossible de lire le fichier. Vérifiez les permissions."}
 
-    # Appeler le service AWS (ici Rekognition) 
+    # Appeler le service AWS (Rekognition) 
     response = aws_service.detect_moderation_labels(
         Image={'Bytes': image_bytes}
     )
@@ -188,10 +182,8 @@ def create_s3_bucket(bucket_name):
     entré : bucket name
     Sortie : print si erreur ou succès
     """
-    # Créer une session AWS
+    # Créer une session et client
     aws_session = get_aws_session()
-
-    # Créer un client S3
     s3_client = aws_session.client("s3")
 
     # Créer le bucket S3
@@ -206,9 +198,7 @@ def create_s3_bucket(bucket_name):
 
 
 def generate_unique_job_name(base_name="transcription-job"):
-    """
-    Génère un nom de travail unique pour éviter les doublons dans le bucket
-    """
+    # Génère un nom de travail unique pour éviter les doublons dans le bucket
     timestamp = int(time.time())  # Utiliser l'heure actuelle en secondes
     return f"{base_name}-{timestamp}"
 
@@ -256,13 +246,12 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
     try:
         transcribe_client.start_transcription_job(
             TranscriptionJobName=unique_job_name,
-            LanguageCode="fr-FR",  # Langue de la transcription (ici, français)
+            LanguageCode="fr-FR",
             Media={'MediaFileUri': media_uri},
-            OutputBucketName=bucket_name  # Le bucket où stocker la sortie transcrite
+            OutputBucketName=bucket_name
         )
         print(f"Tâche de transcription '{unique_job_name}' lancée pour {filename}.")
     except Exception as e:
-        #Si erreur alors fin du programme
         print(f"Erreur lors du démarrage de la transcription : {e}")
         return None
 
@@ -275,7 +264,7 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
             break
         else:
             print("En attente de la fin de la transcription...")
-            time.sleep(10)  # Attendre 30 secondes avant de vérifier à nouveau
+            time.sleep(10)
 
     if job_status == 'COMPLETED':
         # Récupérer le résultat de la transcription
@@ -298,7 +287,7 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
 
 
 
-# Télécharger les stopwords qui correspondent au conjonction de coordination et au mots de liaison
+# Télécharger les stopwords
 nltk.download('stopwords')
 
 def clean_text(raw_text):
@@ -324,9 +313,9 @@ def clean_text(raw_text):
     
     # Tokenizer pour séparer le texte en mots
     tokenizer = RegexpTokenizer(r'\w+')
-    words = tokenizer.tokenize(raw_text.lower())  # Mettre en minuscules et tokeniser
+    words = tokenizer.tokenize(raw_text.lower())
 
-    # Charger les stopwords en français
+    # Charger les stopwords
     stop_words = set(stopwords.words('french'))
 
     # Filtrer les mots pour retirer les mots vides et les stop word
@@ -359,22 +348,16 @@ def extract_keyphrases(text, aws_service):
 
     # Utilisation du service AWS Comprehend pour détecter les expressions clés
     try:
-        # Appel à la méthode detect_key_phrases pour extraire les expressions pertinantes
-        response = aws_service.detect_key_phrases(Text=text, LanguageCode='fr')  # 'fr' pour français
+        response = aws_service.detect_key_phrases(Text=text, LanguageCode='fr')
 
         # Extraire les expressions clés avec leur score de confiance
         key_phrases = response['KeyPhrases']
-
-        # Trier les expressions clés par score de pertinence (du plus élevé au plus bas)
         sorted_key_phrases = sorted(key_phrases, key=lambda x: x['Score'], reverse=True)
-
-        #Permet de stockés les #déjà ajoutés
         added_phrases = set()
 
         # Créer la liste des hashtags sans doublons
         top_10_key_phrases = []
         for phrase in sorted_key_phrases:
-            # Convertir chaque expression en hashtag
             hashtag = f"{phrase['Text'].replace(' ', '').lower()}"
             # Ajouter le hashtag si ce n'est pas déjà dans la liste
             if hashtag not in added_phrases:
@@ -422,16 +405,15 @@ def detect_objects(image_path, aws_service):
         # Appel à Amazon Rekognition pour détecter les objets
         response = aws_service.detect_labels(
             Image={'Bytes': image_bytes},
-            MaxLabels=10,  # Limite à 10 objets détectés
-            MinConfidence=50  # Confiance minimale de 50% (choix arbitraire)
+            MaxLabels=10,
+            MinConfidence=50
         )
         
         # Extraire les objets détectés avec leurs scores de confiance
         labels = response['Labels']
         
-        # Trier les labels par score de confiance (du plus élevé au plus bas)
+        # Trier les labels par score de confiance
         sorted_labels = sorted(labels, key=lambda x: x['Confidence'], reverse=True)
-        # Extraire les 10 objets avec les plus hauts scores de confiance
         top_objects = [label['Name'] for label in sorted_labels[:10]]
 
         return top_objects
@@ -466,18 +448,14 @@ def detect_celebrities(image_path, aws_service):
         with open(image_path, 'rb') as image_file:
             image_bytes = image_file.read()
 
-        # Appel à Amazon Rekognition pour détecter les célébrités
+        # Appel à Amazon Rekognition
         response = aws_service.recognize_celebrities(
             Image={'Bytes': image_bytes}
         )
 
         # Extraire les célébrités détectées
         celebrities = response['CelebrityFaces']
-
-        # Extraire les noms des célébrités détectées
         celebrity_names = [celebrity['Name'] for celebrity in celebrities]
-
-        # Limiter à 10 célébrités
         top_celebrity_names = celebrity_names[:10]
 
         return top_celebrity_names
@@ -528,10 +506,10 @@ def detect_emotions(image_path, aws_service):
         with open(image_path, 'rb') as image_file:
             image_bytes = image_file.read()
 
-        # Appel à Amazon Rekognition pour détecter les visages avec tous les attributs
+        # Appel à Amazon Rekognition
         response = aws_service.detect_faces(
             Image={'Bytes': image_bytes},
-            Attributes=['ALL']  # Demander tous les attributs, y compris les émotions
+            Attributes=['ALL']
         )
 
         # Initialiser la liste de stockage
@@ -539,23 +517,23 @@ def detect_emotions(image_path, aws_service):
 
         # Parcourir les visages détectés dans la réponse
         for face_detail in response['FaceDetails']:
-            # Créer un dictionnaire pour chaque visage détecté
+            # Dictionnaire pour chaque visage détecté
             face_data = {}
 
-            # Récupérer le genre et son niveau de confiance
+            # Genre
             face_data['Gender'] = {
                 'Value': face_detail['Gender']['Value'],
                 'Confidence': face_detail['Gender']['Confidence']
             }
 
-            # Récupérer l'âge estimé (plage min-max)
+            # Récupérer l'âge estimé
             face_data['AgeRange'] = face_detail['AgeRange']
 
-            # Récupérer les émotions avec leur niveau de confiance
+            # Récupérer les émotions / niveau de confiance
             emotions = face_detail['Emotions']
-            face_data['Emotions'] = sorted(emotions, key=lambda x: x['Confidence'], reverse=True)[:3]  # Prendre les 3 émotions principales
+            face_data['Emotions'] = sorted(emotions, key=lambda x: x['Confidence'], reverse=True)[:3]
 
-            # Ajouter les informations du visage à la liste
+            # Ajouter les informations à la liste
             faces_info.append(face_data)
 
         return faces_info
@@ -588,7 +566,7 @@ def summarize_emotions(faces_info):
     
     # Parcourir les visages détectés
     for face in faces_info:
-        # Analyser les émotions avec une confiance > 50%
+        # Analyser les émotions
         for emotion in face['Emotions']:
             if emotion['Confidence'] > 50:
                 emotion_type = emotion['Type']
@@ -605,11 +583,11 @@ def summarize_emotions(faces_info):
                     dominant_emotion['Type'] = emotion_type
                     dominant_emotion['Confidence'] = emotion['Confidence']
     
-    # Calculer les moyennes des émotions
+    # Calculer les moyennes
     for emotion_type, stats in emotion_stats.items():
         stats['average_confidence'] = stats['total_confidence'] / stats['count']
     
-    # Résumé final des résultats
+    # Résumé final
     summary = {
         'total_faces': total_faces,
         'dominant_emotion': dominant_emotion['Type'],
@@ -647,10 +625,9 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
         # Si c'est une image, modérer l'image
         if moderate_image(media_file, rekognition) is not None:
             sensitivetheme = moderate_image(media_file, rekognition)
-            #récupération des cas d'erreurs pour affichage
             if "error" in sensitivetheme:
                 return sensitivetheme
-            return sensitivetheme  # Contenu choquant détecté
+            return sensitivetheme
         
         
         key_phrases = []
@@ -661,7 +638,7 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
         key_phrases.extend(detectObject)
         
         # Détection des émotions et des visages
-        faces = detect_emotions(media_file, rekognition)  # Utilisation de votre fonction detect_emotions
+        faces = detect_emotions(media_file, rekognition)
         if "error" in faces:
             return faces
         for face in faces:
@@ -688,13 +665,14 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_img_file:
                 temp_img_path = temp_img_file.name
-                cv2.imwrite(temp_img_path, frame1)  # Sauvegarder l'image en tant que fichier
+                cv2.imwrite(temp_img_path, frame1) 
 
             # Vérification de contenu choquant avec le fichier enregistré
             if moderate_image(temp_img_path, rekognition) is not None:
                 return None  # Contenu choquant détecté
 
             os.remove(temp_img_path)
+            # Transcription de la vidéo
             job_name = 'transcriptionText'
             transcript_text = get_text_from_speech(media_file, transcribe, job_name,bucket_name)
             texte_nettoye = clean_text(transcript_text)
