@@ -15,7 +15,7 @@ aws_transcribe_client = aws_session.client('transcribe', region_name='us-east-1'
 BUCKET_NAME = 's3-transcriptionspeachtest'
 
 def load_env_credentials():
-    load_dotenv()
+    load_dotenv(dotenv_path='.env') 
     access_key = os.getenv("ACCESS_KEY")
     secret_key = os.getenv("SECRET_KEY")
     bucket_name = os.getenv("BUCKET_NAME")
@@ -97,27 +97,16 @@ if uploaded_file is not None:
             # Simuler un traitement du fichier (remplacer par ton code de traitement réel)
             print(uploaded_file)
             result = process_media(temp_file_path, aws_rekognition_client, aws_transcribe_client, aws_comprehend_client, BUCKET_NAME)
+            if "error" in result: 
+                st.warning(result["error"])
             if isinstance(result, list) or result is None:
                 st.markdown(
-                    """<div style="
-                        background-color: #3e2428; 
-                        color: white; 
-                        padding: 20px; 
-                        text-align: center; 
-                        border-radius: 10px; 
-                        font-size: 24px;
-                        border-radius: 10px 10px 0 0;
-                        font-weight: bold;">
+                    """<div style="background-color: #3e2428; color: white; padding: 20px; text-align: center; border-radius: 10px; font-size: 24px;border-radius: 10px 10px 0 0;font-weight: bold;">
                         🚨 Contenu inapproprié détecté ! 🚨
                     </div>""", unsafe_allow_html=True
                 )
                 st.markdown(
-                    """<div style="
-                        background-color: #3e2428; 
-                        color: red; 
-                        text-align: center;
-                        border-radius: 0 0 10px 10px; 
-                        font-size: 20px;">
+                    """<div style="background-color: #3e2428; color: red; text-align: center;border-radius: 0 0 10px 10px; font-size: 20px;">
                         ❌ Cette publication a été bloquée
                     </div>""", unsafe_allow_html=True
                 )
