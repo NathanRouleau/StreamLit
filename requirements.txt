@@ -1,5 +1,5 @@
-pip install matplotlib
-pip install opencv-python
-pip install boto3
-pip install python-dotenv
-pip install nltk
+matplotlib
+opencv-python
+boto3
+python-dotenv
+nltk
