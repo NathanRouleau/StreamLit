@@ -1,0 +1,7 @@
+Voici les librairies nécessaires au bon fonctionnement du projet:
+
+pip install matplotlib
+pip install opencv-python
+pip install boto3
+pip install python-dotenv
+pip install nltk
