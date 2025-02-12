@@ -14,23 +14,19 @@ aws_comprehend_client = aws_session.client('comprehend', region_name='us-east-1'
 aws_transcribe_client = aws_session.client('transcribe', region_name='us-east-1')
 BUCKET_NAME = 's3-transcriptionspeachtest'
 
-# Fonction pour charger les credentials depuis le fichier .env
-def load_credentials_from_env(file):
-    with open("temp.env", "wb") as f:
-        f.write(file.getbuffer())
-    load_dotenv("temp.env")
+def load_env_credentials():
+    load_dotenv()
     access_key = os.getenv("ACCESS_KEY")
     secret_key = os.getenv("SECRET_KEY")
     bucket_name = os.getenv("BUCKET_NAME")
     return access_key, secret_key, bucket_name
 
-# Fonction pour tester les credentials AWS
 def test_aws_credentials(access_key, secret_key, bucket_name):
     try:
         s3_client = boto3.client(
             "s3",
-            access_key_id=access_key,
-            secret_access_key=secret_key
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
         )
         s3_client.head_bucket(Bucket=bucket_name)
         st.sidebar.success("Connexion réussie au bucket S3!")
@@ -40,44 +36,35 @@ def test_aws_credentials(access_key, secret_key, bucket_name):
         st.sidebar.error(f"Erreur de connexion : {str(e)}")
 
 # Barre latérale pour la configuration
-st.sidebar.title("Configuration")
-st.sidebar.subheader("Credentials AWS")
+st.sidebar.title("⚙️ Configuration")
+st.sidebar.subheader("🔑 Credentials AWS")
 
-# Option de chargement du fichier .env
-env_file = st.sidebar.file_uploader("Charger credentials depuis .env", type=["env"])
+# Vérifie si les credentials ont été chargés depuis .env
+if 'credentials_loaded' not in st.session_state:
+    st.session_state.credentials_loaded = False
 
-# Méthode automatique de chargement des credentials
-if env_file is not None:
+if st.sidebar.button("🔍 Charger les credentials depuis .env"):
     try:
-        access_key, secret_key, bucket_name = load_credentials_from_env(env_file)
-        st.sidebar.text_input("AWS Access Key ID", value=access_key, key="access_key", disabled=True)
-        st.sidebar.text_input("AWS Secret Access Key", value=secret_key, key="secret_key", disabled=True)
-        st.sidebar.text_input("Nom du bucket S3", value=bucket_name, key="bucket_name", disabled=True)
-        st.sidebar.success("Credentials chargés depuis le fichier .env avec succès!")
+        access_key, secret_key, bucket_name = load_env_credentials()
+        if access_key and secret_key and bucket_name:
+            st.session_state.access_key = access_key
+            st.session_state.secret_key = secret_key
+            st.session_state.bucket_name = bucket_name
+        else:
+            st.sidebar.error("Échec du chargement : certaines variables sont manquantes dans .env")
     except Exception as e:
-        st.sidebar.error(f"Erreur lors du chargement des credentials depuis .env : {e}")
+        st.sidebar.error(f"Erreur lors du chargement des credentials : {e}")
 
-# Méthode manuelle de saisie des credentials
-access_key = st.sidebar.text_input("AWS Access Key ID", value="", type="password")
-secret_key = st.sidebar.text_input("AWS Secret Access Key", value="", type="password")
-bucket_name = st.sidebar.text_input("Nom du bucket S3", value="")
+# Champs pour modifier manuellement les credentials
+access_key = st.sidebar.text_input("AWS Access Key ID", value=st.session_state.get("access_key", ""), type="password", disabled=st.session_state.credentials_loaded)
+secret_key = st.sidebar.text_input("AWS Secret Access Key", value=st.session_state.get("secret_key", ""), type="password", disabled=st.session_state.credentials_loaded) 
+bucket_name = st.sidebar.text_input("Nom du bucket S3", value=st.session_state.get("bucket_name", ""), disabled=st.session_state.credentials_loaded)
 
-if access_key and secret_key and bucket_name:
-    st.sidebar.success("Credentials AWS saisis manuellement.")
-
-# Bouton pour tester la connexion
-if st.sidebar.button("Tester les credentials AWS"):
-    if access_key and secret_key and bucket_name:
-        test_aws_credentials(access_key, secret_key, bucket_name)
-    else:
-        st.sidebar.error("Veuillez remplir tous les champs de credentials.")
-
-# Sauvegarder les credentials dans l'état de session
 if access_key and secret_key and bucket_name:
     st.session_state.access_key = access_key
     st.session_state.secret_key = secret_key
     st.session_state.bucket_name = bucket_name
-
+    st.sidebar.success("Credentials AWS enregistrés.")
 
 # Taille maximale en octets (par exemple 10 MB)
 MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -108,15 +95,38 @@ if uploaded_file is not None:
     else:
         with st.spinner("Analyse en cours..."):
             # Simuler un traitement du fichier (remplacer par ton code de traitement réel)
-            #time.sleep(2)  
             print(uploaded_file)
             result = process_media(temp_file_path, aws_rekognition_client, aws_transcribe_client, aws_comprehend_client, BUCKET_NAME)
             if isinstance(result, list) or result is None:
-                st.error("🚨 Contenu inapproprié détecté ! 🚨")
-                st.error("❌ Cette publication a été bloquée") 
-                st.error("🔍 Thèmes détectés :")
-                for theme in result:
-                     st.error(f"- ❌ **{theme}**")
+                st.markdown(
+                    """<div style="
+                        background-color: #3e2428; 
+                        color: white; 
+                        padding: 20px; 
+                        text-align: center; 
+                        border-radius: 10px; 
+                        font-size: 24px;
+                        border-radius: 10px 10px 0 0;
+                        font-weight: bold;">
+                        🚨 Contenu inapproprié détecté ! 🚨
+                    </div>""", unsafe_allow_html=True
+                )
+                st.markdown(
+                    """<div style="
+                        background-color: #3e2428; 
+                        color: red; 
+                        text-align: center;
+                        border-radius: 0 0 10px 10px; 
+                        font-size: 20px;">
+                        ❌ Cette publication a été bloquée
+                    </div>""", unsafe_allow_html=True
+                )
+                
+                # Liste des thèmes problématiques en cas d'image inapropriée 
+                if result:
+                    st.error("🔍 Thèmes détectés :")
+                    for theme in result:
+                        st.error(f"⚠️ **{theme}**")
 
             else:
                 # Image
@@ -126,7 +136,10 @@ if uploaded_file is not None:
                     hashtags = result.get("hashtags", [])
                     if hashtags:
                         st.markdown("### 🏷️ Hashtags générés :")
-                        st.markdown(", ".join([f"**#{tag}**" for tag in hashtags]))
+                        st.markdown("""<div style="display: flex; flex-wrap: wrap;">{}</div>"""
+                            .format("".join([f'<span style="background-color: #b0f2b6; border-radius: 12px; padding: 5px 12px; margin: 5px; font-size: 14px; color: #333;">#{tag}</span>' for tag in hashtags])
+                            ), unsafe_allow_html=True
+                        )
                     else:
                         st.write("Aucun hashtag généré.")
                         st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
@@ -138,7 +151,10 @@ if uploaded_file is not None:
                     hashtags = result.get("hashtags", [])
                     if hashtags:
                         st.markdown("### 🏷️ Hashtags générés :")
-                        st.markdown(", ".join([f"**#{tag}**" for tag in hashtags]))
+                        st.markdown("""<div style="display: flex; flex-wrap: wrap;">{}</div>"""
+                            .format("".join([f'<span style="background-color: #b0f2b6; border-radius: 12px; padding: 5px 12px; margin: 5px; font-size: 14px; color: #333;">#{tag}</span>' for tag in hashtags])
+                            ), unsafe_allow_html=True
+                        )
                     else:
                         st.write("Aucun hashtag généré.")
                         st.success(f"Le fichier {uploaded_file.name} a été analysé avec succès.")
@@ -147,7 +163,7 @@ if uploaded_file is not None:
 
                     if transcription:
                         st.markdown("📝 Transcription :")
-                        st.text_area("Texte extrait de la vidéo :", transcription, height=200)
+                        st.text_area("Texte extrait de la vidéo :", transcription, height=250)
                     else:
                         st.write("Aucune transcription disponible.")
 
