@@ -1,3 +1,4 @@
+streamlit
 matplotlib
 opencv-python
 boto3
