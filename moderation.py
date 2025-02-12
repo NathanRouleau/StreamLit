@@ -1,6 +1,15 @@
 import os
 from matplotlib import pyplot as plt
 import cv2
+import boto3
+from dotenv import load_dotenv
+import time
+import urllib.request
+import json
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import RegexpTokenizer
+import tempfile
 
 def check_filetype(filename):
     """
@@ -27,13 +36,13 @@ def check_filetype(filename):
     None
     """
 
-    # Extrait le nom de base du fichier à partir du chemin de fichier fourni.
-    file_basename = os.path.basename(filename)
+    #extrait le nom du fichier
+    file_basename = os.path.basename(filename) 
 
-    # Sépare le nom de base sur le point et prend la dernière partie comme extension.
+    # Sépare le nom pour récupérer le type du fichier
     extension = file_basename.split(".")[-1]
 
-    # Détermine le type de fichier en fonction de l'extension.
+    # Détermine le type de fichier en fonction de l'extension
     if extension in ["jpg", "png", "tiff", "svg"]:
         filetype = "image"
     elif extension in ["mp4", "avi", "mkv"]:
@@ -41,11 +50,13 @@ def check_filetype(filename):
     else:
         filetype = None
 
-    # Enregistre le type de fichier détecté.
+    # Enregistre le type de fichier détecté
     print(f"[INFO] : Le fichier {file_basename} est de type : {filetype}")
     
     return filetype
 
+
+import cv2
 
 def extract_frame_video(video_path, frame_id):
     """
@@ -69,27 +80,19 @@ def extract_frame_video(video_path, frame_id):
     <class 'numpy.ndarray'>
     """
 
-    # Ouvre la vidéo à partir du chemin fourni.
+    # Ouvre la vidéo à partir du chemin fourni
     video = cv2.VideoCapture(video_path)
 
-    # Positionne le lecteur vidéo sur l'image spécifiée par frame_id.
+    # Récupère la frame demandé a partir de la vidéo
     video.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
 
-    # Lit l'image actuelle.
+    # Lit l'image 
     ret, image = video.read()
 
     # Si la lecture réussit (ret est True), retourne l'image.
     # Sinon, retourne None.
     return image if ret else None
 
-
-
-
-
-
-
-import os, boto3
-from dotenv import load_dotenv
 
 def get_aws_session():
     """
@@ -113,14 +116,13 @@ def get_aws_session():
     # Charge les variables d'environnement depuis .env.
     load_dotenv()
 
-    # Crée une session AWS avec les clés d'accès et la région définies dans les variables d'environnement.
+    # Crée une session AWS avec les clés spécifié
     aws_session = boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),        # Récupère l'ID de clé d'accès depuis les variables d'environnement.
-        aws_secret_access_key=os.getenv("SECRET_KEY"),    # Récupère la clé d'accès secrète depuis les variables d'environnement.
-        region_name="us-east-1"                           # Spécifie la région AWS à utiliser.
+        aws_access_key_id=os.getenv("ACCESS_KEY"),        # Récupère l'access key 
+        aws_secret_access_key=os.getenv("SECRET_KEY"),    # Récupère la clé secret key
     )
     
-    # Retourne l'objet session créé.
+    # Retourne la session
     return aws_session
 
 
@@ -147,20 +149,22 @@ def moderate_image(image_path, aws_service):
     >>> moderate_image("/chemin/vers/image.jpg", aws_rekognition_client)
     ['Nudity', 'Explicit Violence']
     """
+    # ouvrir l'image, récupérer ses bytes
     with open(image_path, 'rb') as image_file:
         image_bytes = image_file.read()
 
-    # Appeler le service AWS (ici Rekognition) pour analyser l'image
+    # Appeler le service AWS (ici Rekognition) 
     response = aws_service.detect_moderation_labels(
         Image={'Bytes': image_bytes}
     )
 
-    # Extraire les étiquettes de modération de la réponse
+    # Extraire les étiquettes de avec un score de 50 (décision arbitraire)
     moderation_labels = response.get('ModerationLabels', [])
     inappropriate_themes = [
-        label['Name'] for label in moderation_labels if label['Confidence'] > 80
+        label['Name'] for label in moderation_labels if label['Confidence'] > 50
     ]
 
+    #Si cas inaproprié faire retourner les thèmes sinon None
     if(inappropriate_themes):
         return inappropriate_themes
     else:
@@ -168,45 +172,12 @@ def moderate_image(image_path, aws_service):
 
 
 
-
-
-
-import os
-import boto3
-from dotenv import load_dotenv
-def get_aws_session():
-    """
-    Crée et retourne une session AWS.
-    Charge les clés d'accès depuis un fichier .env pour une configuration sécurisée.
-    """
-    # Charger les variables d'environnement à partir du fichier .env
-    load_dotenv()
-
-    # Créer une session AWS avec les clés d'accès et la région spécifiée
-    return boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SECRET_KEY"),
-        region_name="us-east-1"  # Vous pouvez changer la région si nécessaire
-    )
-
-        
-
-
-import boto3
-import os
-from dotenv import load_dotenv
-
-def get_aws_session():
-    # Charger les variables d'environnement depuis le fichier .env
-    load_dotenv()
-
-    # Créer une session AWS avec les clés d'accès et la région spécifiée
-    return boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SECRET_KEY"),
-    ) 
-
 def create_s3_bucket(bucket_name):
+    """
+    Créer un bucket s3 a partir du .env et du nom du bucket
+    entré : bucket name
+    Sortie : print si erreur ou succès
+    """
     # Créer une session AWS
     aws_session = get_aws_session()
 
@@ -224,29 +195,13 @@ def create_s3_bucket(bucket_name):
 
 
 
-
-import os
-import time
-import urllib.request
-import json
-import time
-
 def generate_unique_job_name(base_name="transcription-job"):
     """
-    Génère un nom de travail unique en utilisant l'horodatage.
+    Génère un nom de travail unique pour éviter les doublons dans le bucket
     """
     timestamp = int(time.time())  # Utiliser l'heure actuelle en secondes
     return f"{base_name}-{timestamp}"
-def get_aws_session():
-    """
-    Crée et retourne une session AWS.
-    Charge les clés d'accès depuis un fichier .env pour une configuration sécurisée.
-    """
-    return boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SECRET_KEY"),
-        region_name="us-east-1"  # Vous pouvez changer la région si nécessaire
-    )
+
 def get_text_from_speech(filename, aws_service,job_name,bucket_name):
     """
     Convertit de la parole en texte en utilisant AWS Transcribe.
@@ -269,12 +224,12 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
     aws_session = get_aws_session()
     s3_client = aws_session.client('s3')
 
-    # Téléverser le fichier audio dans S3
+    # télécharger le fichier audio dans le bucket S3
     try:
         s3_client.upload_file(filename, bucket_name, os.path.basename(filename))
-        print(bucket_name)
         print(f"Fichier {filename} téléversé avec succès dans le seau {bucket_name}.")
     except Exception as e:
+        #Génère une erreur si problème de téléchargement
         print(f"Erreur lors du téléversement du fichier : {e}")
         return None
 
@@ -297,6 +252,7 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
         )
         print(f"Tâche de transcription '{unique_job_name}' lancée pour {filename}.")
     except Exception as e:
+        #Si erreur alors fin du programme
         print(f"Erreur lors du démarrage de la transcription : {e}")
         return None
 
@@ -309,14 +265,14 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
             break
         else:
             print("En attente de la fin de la transcription...")
-            time.sleep(30)  # Attendre 30 secondes avant de vérifier à nouveau
+            time.sleep(10)  # Attendre 30 secondes avant de vérifier à nouveau
 
     if job_status == 'COMPLETED':
         # Récupérer le résultat de la transcription
         transcription_url = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
         print(f"Transcription terminée. Résultat disponible ici : {transcription_url}")
 
-        # Télécharger le fichier JSON de transcription
+        # Télécharger le fichier JSON de transcription Si erreur return none
         try:
             response = urllib.request.urlopen(transcription_url)
             transcript_data = json.loads(response.read())
@@ -332,54 +288,7 @@ def get_text_from_speech(filename, aws_service,job_name,bucket_name):
 
 
 
-
-import os
-import boto3
-from dotenv import load_dotenv
-
-# Charger les variables d'environnement
-load_dotenv()
-
-# Fonction pour créer la session AWS
-def get_aws_session():
-    """
-    Crée et retourne une session AWS.
-    Charge les clés d'accès depuis un fichier .env pour une configuration sécurisée.
-    """
-    return boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SECRET_KEY"),
-        region_name="us-east-1"  # Vous pouvez changer la région si nécessaire
-    )
-
-# Fonction pour extraire les expressions clés
-def extract_keyphrases(text, aws_service):
-    """
-    Extrait les expressions clés d'un texte et retourne les 10 expressions les plus pertinentes comme hashtags.
-    """
-    try:
-        # Appeler AWS Comprehend pour extraire les expressions clés
-        response = aws_service.detect_key_phrases(Text=text, LanguageCode="fr")
-        
-        # Récupérer les expressions clés triées par score de pertinence
-        key_phrases = [phrase['Text'] for phrase in sorted(response['KeyPhrases'], key=lambda x: x['Score'], reverse=True)]
-        
-        # Retourner les 10 expressions clés les plus pertinentes
-        return key_phrases[:10]
-    
-    except Exception as e:
-        print(f"Erreur lors de l'extraction des expressions clés : {e}")
-        return []
-
-# Créer la session AWS
-
-
-
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import RegexpTokenizer
-
-# Télécharger les stopwords si ce n'est pas déjà fait
+# Télécharger les stopwords qui correspondent au conjonction de coordination et au mots de liaison
 nltk.download('stopwords')
 
 def clean_text(raw_text):
@@ -410,16 +319,12 @@ def clean_text(raw_text):
     # Charger les stopwords en français
     stop_words = set(stopwords.words('french'))
 
-    # Filtrer les mots pour retirer les mots vides et les mots trop courts (1-2 lettres)
+    # Filtrer les mots pour retirer les mots vides et les stop word
     cleaned_text = [word for word in words if word not in stop_words and len(word) > 2]
 
     # Retourner le texte nettoyé sous forme d'une chaîne de caractères
     return ' '.join(cleaned_text)
 
-
-
-
-import boto3
 
 def extract_keyphrases(text, aws_service):
     """
@@ -444,7 +349,7 @@ def extract_keyphrases(text, aws_service):
 
     # Utilisation du service AWS Comprehend pour détecter les expressions clés
     try:
-        # Appel à la méthode detect_key_phrases pour extraire les expressions clés
+        # Appel à la méthode detect_key_phrases pour extraire les expressions pertinantes
         response = aws_service.detect_key_phrases(Text=text, LanguageCode='fr')  # 'fr' pour français
 
         # Extraire les expressions clés avec leur score de confiance
@@ -453,7 +358,7 @@ def extract_keyphrases(text, aws_service):
         # Trier les expressions clés par score de pertinence (du plus élevé au plus bas)
         sorted_key_phrases = sorted(key_phrases, key=lambda x: x['Score'], reverse=True)
 
-        # Utiliser un ensemble pour suivre les expressions déjà ajoutées
+        #Permet de stockés les #déjà ajoutés
         added_phrases = set()
 
         # Créer la liste des hashtags sans doublons
@@ -471,36 +376,10 @@ def extract_keyphrases(text, aws_service):
                 break
 
         return top_10_key_phrases
-    
+    #Si erreur pendant alors return none
     except Exception as e:
         print(f"Erreur lors de l'extraction des expressions clés : {e}")
         return []
-
-
-
-
-
-import os
-import boto3
-from dotenv import load_dotenv
-
-# Charger les variables d'environnement
-load_dotenv()
-
-# Fonction pour créer la session AWS
-def get_aws_session():
-    """
-    Crée et retourne une session AWS.
-    Charge les clés d'accès depuis un fichier .env pour une configuration sécurisée.
-    """
-    return boto3.Session(
-        aws_access_key_id=os.getenv("ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("SECRET_KEY"),
-        region_name="us-east-1"  # Vous pouvez changer la région si nécessaire
-    )
-
-
-
 
 def detect_objects(image_path, aws_service):
     """
@@ -531,7 +410,7 @@ def detect_objects(image_path, aws_service):
         response = aws_service.detect_labels(
             Image={'Bytes': image_bytes},
             MaxLabels=10,  # Limite à 10 objets détectés
-            MinConfidence=50  # Confiance minimale de 50%
+            MinConfidence=50  # Confiance minimale de 50% (choix arbitraire)
         )
         
         # Extraire les objets détectés avec leurs scores de confiance
@@ -544,16 +423,10 @@ def detect_objects(image_path, aws_service):
         top_objects = [label['Name'] for label in sorted_labels[:10]]
 
         return top_objects
-    
+    #si erreur lors du traitement alors return un tableau vide 
     except Exception as e:
         print(f"Erreur lors de la détection des objets : {e}")
         return []
-
-
-
-
-
-
 
 def detect_celebrities(image_path, aws_service):
     """
@@ -596,12 +469,10 @@ def detect_celebrities(image_path, aws_service):
 
         return top_celebrity_names
 
+    #return un tableau vide
     except Exception as e:
         print(f"Erreur lors de la détection des célébrités : {e}")
         return []
-
-
-
 
 def detect_emotions(image_path, aws_service):
     """
@@ -649,7 +520,7 @@ def detect_emotions(image_path, aws_service):
             Attributes=['ALL']  # Demander tous les attributs, y compris les émotions
         )
 
-        # Initialiser la liste pour stocker les informations des visages détectés
+        # Initialiser la liste de stockage
         faces_info = []
 
         # Parcourir les visages détectés dans la réponse
@@ -672,15 +543,6 @@ def detect_emotions(image_path, aws_service):
 
             # Ajouter les informations du visage à la liste
             faces_info.append(face_data)
-
-            # Affichage des informations sur le visage détecté
-            print("[INFO] Visage détecté:")
-            print(f"  - Genre: {face_data['Gender']['Value']} (confiance: {face_data['Gender']['Confidence']}%)")
-            print(f"  - Âge estimé: {face_data['AgeRange']['Low']}-{face_data['AgeRange']['High']} ans")
-            print("  - Émotions principales:")
-            for emotion in face_data['Emotions']:
-                print(f"    * {emotion['Type']}: {emotion['Confidence']:.2f}%")
-            print("---")
 
         return faces_info
 
@@ -709,29 +571,16 @@ def summarize_emotions(faces_info):
     """
     total_faces = len(faces_info)
     emotion_stats = {}
-    age_stats = {'min': float('inf'), 'max': float('-inf'), 'total_age': 0, 'count': 0}
-    gender_stats = {'Male': 0, 'Female': 0}
     dominant_emotion = {'Type': None, 'Confidence': 0}
     
     # Parcourir les visages détectés
     for face in faces_info:
-        # Analyser le genre
-        gender = face['Gender']['Value']
-        gender_stats[gender] += 1
-        
-        # Analyser l'âge
-        age_range = face['AgeRange']
-        avg_age = (age_range['Low'] + age_range['High']) / 2
-        age_stats['total_age'] += avg_age
-        age_stats['count'] += 1
-        age_stats['min'] = min(age_stats['min'], avg_age)
-        age_stats['max'] = max(age_stats['max'], avg_age)
-        
         # Analyser les émotions avec une confiance > 50%
         for emotion in face['Emotions']:
             if emotion['Confidence'] > 50:
-                # Mettre à jour les statistiques des émotions
                 emotion_type = emotion['Type']
+                
+                # Mettre à jour les statistiques des émotions
                 if emotion_type not in emotion_stats:
                     emotion_stats[emotion_type] = {'count': 0, 'total_confidence': 0}
                 
@@ -747,79 +596,15 @@ def summarize_emotions(faces_info):
     for emotion_type, stats in emotion_stats.items():
         stats['average_confidence'] = stats['total_confidence'] / stats['count']
     
-    # Calculer la moyenne des âges
-    avg_age = age_stats['total_age'] / age_stats['count'] if age_stats['count'] > 0 else 0
-
     # Résumé final des résultats
     summary = {
         'total_faces': total_faces,
         'dominant_emotion': dominant_emotion['Type'],
         'dominant_emotion_confidence': dominant_emotion['Confidence'],
-        'emotion_stats': emotion_stats,
-        'age_stats': {
-            'min_age': age_stats['min'],
-            'max_age': age_stats['max'],
-            'average_age': avg_age
-        },
-        'gender_stats': gender_stats
+        'emotion_stats': emotion_stats
     }
 
     return summary
-
-
-
-def print_face_details(faces_info):
-    """
-    Affiche les détails des visages détectés (genre, âge, émotions).
-    """
-    for idx, face in enumerate(faces_info):
-        print(f"[INFO] Visage {idx + 1} détecté:")
-        print(f"  - Genre: {face['Gender']['Value']} (confiance: {face['Gender']['Confidence']:.1f}%)")
-        print(f"  - Âge estimé: {face['AgeRange']['Low']} - {face['AgeRange']['High']} ans")
-        print(f"  - Émotions principales:")
-        for emotion in face['Emotions']:
-            print(f"    * {emotion['Type']}: {emotion['Confidence']:.1f}%")
-
-
-def analyze_image(image_path):
-    """
-    Analyse une image et affiche les détails et statistiques des émotions.
-    """
-    # Détecter les émotions dans l'image
-    faces_info = detect_emotions(image_path, aws_rekognition_client)
-    
-    # Afficher les détails de chaque visage détecté
-    print(f"Analyser l'image : {image_path}")
-    print_face_details(faces_info)
-    
-    # Résumer les émotions détectées
-    summary = summarize_emotions(faces_info)
-    
-    # Afficher le résumé des statistiques
-    print(f"\n[INFO] Résumé des émotions :")
-    print(f"  - Nombre total de visages : {summary['total_faces']}")
-    print(f"  - Émotion dominante : {summary['dominant_emotion']} (confiance: {summary['dominant_emotion_confidence']:.1f}%)")
-    print(f"  - Statistiques des émotions :")
-    for emotion, stats in summary['emotion_stats'].items():
-        print(f"    * {emotion}: {stats['count']} occurrences, confiance moyenne: {stats['average_confidence']:.1f}%")
-    
-    print(f"  - Statistiques d'âge :")
-    print(f"    * Âge min : {summary['age_stats']['min_age']} ans")
-    print(f"    * Âge max : {summary['age_stats']['max_age']} ans")
-    print(f"    * Âge moyen : {summary['age_stats']['average_age']:.1f} ans")
-    
-    print(f"  - Distribution des genres :")
-    print(f"    * Hommes : {summary['gender_stats']['Male']}")
-    print(f"    * Femmes : {summary['gender_stats']['Female']}")
-    print("\n" + "-" * 50)
-
-
-import os
-import time
-import cv2
-import boto3
-import tempfile
-from matplotlib import pyplot as plt
 
 def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
     """
@@ -841,9 +626,9 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
     Retourne :
     - dict : Dictionnaire contenant des hashtags pour les images ou des sous-titres et hashtags pour les vidéos.
     """
-    file_extension = os.path.splitext(media_file)[1].lower()
+    file_type = check_filetype(media_file)
 
-    if file_extension in ['.jpg', '.jpeg', '.png']:
+    if file_type =="image":
         # Si c'est une image, modérer l'image
         if moderate_image(media_file, rekognition) is not None:
             sensitivetheme = moderate_image(media_file, rekognition)
@@ -863,15 +648,10 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
                     key_phrases.append(f"{emotion['Type'].lower()}")
         
         # Détection des célébrités
-        key_phrases.extend(detect_celebrities(media_file, rekognition))
-        
-        # Extraire des expressions clés (hashtags)
-        text = ' '.join(key_phrases)
-        # Utilisation de votre fonction extract_keyphrases
-        
+        key_phrases.extend(detect_celebrities(media_file, rekognition))        
         # Retourner les hashtags
         return {'hashtags': list(set(key_phrases))}
-    elif file_extension in ['.mp4', '.mov', '.avi']:
+    elif file_type == "vidéo":
         frame1 = extract_frame_video(media_file, 1)
         
         if frame1 is not None:
@@ -895,8 +675,6 @@ def process_media(media_file, rekognition, transcribe, comprehend, bucket_name):
             texte_nettoye = clean_text(transcript_text)
             key_phrases = extract_keyphrases(texte_nettoye, comprehend)
             return {'subtitles': transcript_text , 'hashtags': list(set(key_phrases))}
-            
-        
         
     return None
     
